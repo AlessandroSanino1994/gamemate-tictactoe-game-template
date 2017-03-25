@@ -1,53 +1,83 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
- */
-
 import React, { Component } from 'react';
+import { LoginScene } from './android_components/scenes/login/loginScene.js';
+import { MainMenuScene } from './android_components/scenes/main_menu/mainMenuScene.js';
+import { NavbarMapper } from './android_components/navbar/navbarMapper.js';
+
 import {
   AppRegistry,
   StyleSheet,
-  Text,
-  View
+  Navigator,
+  BackAndroid,
+  ToastAndroid
 } from 'react-native';
 
 export default class TicTacToe extends Component {
+  constructor(props) {
+    super(props);
+    this.handleBackButtonPress = this._handleBackButtonPress.bind(this);
+  }
+
+  componentWillMount() {
+    let response = fetch('http://gamemate.di.unito.it:8080/', {
+      method : 'POST'
+    }).catch((error) => {
+      ToastAndroid.show('Please check your network connection', ToastAndroid.SHORT);
+    });
+  }
+
   render() {
     return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Welcome to React Native!
-        </Text>
-        <Text style={styles.instructions}>
-          To get started, edit index.android.js
-        </Text>
-        <Text style={styles.instructions}>
-          Double tap R on your keyboard to reload,{'\n'}
-          Shake or press menu button for dev menu
-        </Text>
-      </View>
+      <Navigator style={{flex : 1}}
+        ref='nav'
+        initialRoute={{name : 'TicTacToe by Gamemate', component : LoginScene, index : 0}}
+        renderScene={this.renderScene}
+        configureScene={this.configureScene}
+        navigationBar={
+          <Navigator.NavigationBar
+          navigationStyles={Navigator.NavigationBar.StylesIOS}
+          routeMapper={NavbarMapper}
+          style={styles.navbar} />
+        } />
     );
+  }
+
+  componentDidMount() {
+    BackAndroid.addEventListener('hardwareBackPress', this.handleBackButtonPress);
+  }
+
+  _handleBackButtonPress() {
+     const invalidBack = this.refs.nav != undefined &&
+                         this.refs.nav.getCurrentRoutes().length != 1;
+     if(invalidBack)
+       this.refs.nav.pop();
+     return invalidBack;
+   }
+
+  renderScene(route, navigator) {
+    if(route.name == 'TicTacToe by Gamemate') {
+      return <LoginScene navigator={navigator}/>;
+    } else if (route.name == 'Main Menu') {
+      return <MainMenuScene navigator={navigator} username={route.passProps.username}/>;
+    } else if (route.name == "Match") {
+      return <MatchScene navigator={navigator}
+                         firstPlayer={route.passProps.firstPlayer}
+                         socket={route.passProps.socket}
+                         lobby={route.passProps.lobby}/>;
+    }
+  }
+
+  configureScene(route, routeStack) {
+   return Navigator.SceneConfigs.PushFromRight; //FloatFromBottom
   }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
+    navbar : {
+      backgroundColor : 'lightgray',
+      borderBottomColor : 'blue',
+      borderBottomWidth : 1,
+      margin : 0
+    }
 });
 
 AppRegistry.registerComponent('TicTacToe', () => TicTacToe);
