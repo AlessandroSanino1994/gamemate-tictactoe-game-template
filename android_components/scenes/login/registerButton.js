@@ -45,12 +45,10 @@ export class RegisterButton extends Component {
             switch (responseJson.Type) {
               case 'UserSessionToken':
                 Application.SessionToken = responseJson.SessionToken;
+                Application.Username = username;
                 this.props.navigator.push({
                   name : 'Main Menu',
-                  component : MainMenuScene,
-                  passProps : {
-                    username : username
-                  }
+                  component : MainMenuScene
                 });
                 break;
               case 'ErrorDetail':

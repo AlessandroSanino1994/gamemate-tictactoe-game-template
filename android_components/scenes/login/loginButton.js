@@ -50,7 +50,7 @@ export class LoginButton extends Component {
             break;
           case 'UserSessionToken':
             Application.SessionToken = responseJson.SessionToken;
-
+            Application.Username = username;
             //save token in realm and push.
             /*
             class RealmObjectImpl {}

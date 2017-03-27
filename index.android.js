@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { LoginScene } from './android_components/scenes/login/loginScene.js';
 import { MainMenuScene } from './android_components/scenes/main_menu/mainMenuScene.js';
+import { MatchScene } from './android_components/scenes/match/matchScene.js';
 import { NavbarMapper } from './android_components/navbar/navbarMapper.js';
 
 import {
@@ -10,6 +11,8 @@ import {
   BackAndroid,
   ToastAndroid
 } from 'react-native';
+
+console.disableYellowBox = true;
 
 export default class TicTacToe extends Component {
   constructor(props) {
@@ -58,11 +61,12 @@ export default class TicTacToe extends Component {
       return <LoginScene navigator={navigator}/>;
     } else if (route.name == 'Main Menu') {
       return <MainMenuScene navigator={navigator} username={route.passProps.username}/>;
-    } else if (route.name == "Match") {
+    } else if (route.name == 'Match') {
       return <MatchScene navigator={navigator}
                          firstPlayer={route.passProps.firstPlayer}
                          socket={route.passProps.socket}
-                         lobby={route.passProps.lobby}/>;
+                         lobby={route.passProps.lobby}
+                         />;
     }
   }
 

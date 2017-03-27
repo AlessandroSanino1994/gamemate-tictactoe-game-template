@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { Application } from '../../../shared_components/application.js';
 import { LoadingButton } from '../../buttons/loadingButton.js';
 import { TicTacToe } from '../../game_logic_view/ticTacToe.js';
+import { Grid } from './grid.js';
+
 import {
   Text,
   StyleSheet,
@@ -12,107 +14,118 @@ import {
 
 
 
-export class Lobby extends Component {
+export class MatchScene extends Component {
   constructor(props) {
     super(props);
-    const {firstPlayer, username} = this.props;
-    this.MY_SIMBOL = firstPlayer.Username == username ? TicTacToe.CROSS : TicTacToe.CIRCLE;
-
+    const {firstPlayer, player} = this.props;
+    this.MY_SIMBOL = firstPlayer.Username === Application.Username ? TicTacToe.CellValue.CROSS : TicTacToe.CellValue.CIRCLE;
     this.onCellPress = this._onCellPress.bind(this);
   }
 
   componentWillMount() {
     const { lobby, socket, firstPlayer } = this.props;
 
-    const initialMatrix = []
+    let initialMatrix = [];
     for(let i = 0; i < 3; i++) {
-      initialMatrix[i] = [TicTacToe.EMPTY, TicTacToe.EMPTY, TicTacToe.EMPTY];
+      initialMatrix[i] = [TicTacToe.CellValue.EMPTY, TicTacToe.CellValue.EMPTY, TicTacToe.CellValue.EMPTY];
     }
+
     this.setState({
       lobby : lobby,
       gameMatrix : initialMatrix,
       socket : socket,
       turnOfPlayer : firstPlayer,
       finished : false,
-      matchStatusText : this.MY_SIMBOL === TicTacToe.CROSS ? TicTacToe.StatusYourTurn : TicTacToe.StatusWaitingOpponent
+      enableUI : this.MY_SIMBOL === TicTacToe.CellValue.CROSS,
     });
 
     socket.onmessage = (event) => {
-        //parse event.data
-        //handle only lobby events
-        //when match starts pass to another scene
-        //which will replace this function with
-        //another regarding only match events.
-        response = JSON.parse(event.data);
-          const { lobby } = this.state;
-          const { Action, RoomID, CustomData} = response;
-          console.warn(JSON.stringify(response));
-          switch (Action) {
-            case "MatchUpdate":
-              const { Cell, Symbol, Player, TurnOfPlayer, End } = response;
-              const { gameMatrix } = this.state;
-              gameMatrix[Cell.X][Cell.Y] = Symbol;
-              this.setState({
-                gameMatrix : gameMatrix,
-                turnOfPlayer : !End ? TurnOfPlayer : null
-              })
-              if(End){
-                this.setState({
-                  finished : true
-                });
-                ToastAndroid.show("And the winner is... " + Player.Username, ToastAndroid.LONG);
-              }
-              break;
-            case "MoveRejected":
-              const { Cell, Symbol, End } = response;
-              const { gameMatrix } = this.state;
-              if (!End) {
-                gameMatrix[Cell.X][Cell.Y] = TicTacToe.EMPTY;
-                this.setState({
-                  gameMatrix : gameMatrix
-                });
-              }
-              break;
-            case "MoveOK":
-              const { Cell, Symbol, TurnOfPlayer } = response;
-              this.setState({
-                turnOfPlayer : TurnOfPlayer
-              });
-              break;
-              default:
-                console.warn("UNKNOWN MESSAGE : " + JSON.stringify(response));
-                break;
+      response = JSON.parse(event.data);
+      const { lobby, socket, gameMatrix, turnOfPlayer } = this.state;
+      const { username } = this.props;
+      const { Action, RoomID, CustomData, Cell, Symbol, Player, NextPlayer, Result, Winner} = response;
+      console.warn(JSON.stringify(response));
+      switch (Action) {
+        case "NewMove":
+          const { gameMatrix } = this.state;
+          gameMatrix[Cell.X][Cell.Y] = Symbol;
+          this.setState({
+            gameMatrix : gameMatrix,
+            turnOfPlayer : NextPlayer
+          })
+          if(Result != TicTacToe.MatchStatus.ONGOING){
+            this.setState({
+              finished : true,
+              enableUI : false,
+              turnOfPlayer : null
+            });
+            if(Result == TicTacToe.MatchStatus.WIN) {
+              ToastAndroid.show("And the winner is... " + turnOfPlayer.Username, ToastAndroid.LONG);
+            } else {
+              ToastAndroid.show("It's a DRAW", ToastAndroid.LONG);
+            }
+          } else if(NextPlayer.Username === Application.Username) {
+            //my turn
+            this.setState({
+              enableUI : true
+            });
           }
+          break;
+        case "MoveRejected":
+          if (Result == TicTacToe.MatchStatus.ONGOING) {
+            gameMatrix[Cell.X][Cell.Y] = TicTacToe.CellValue.EMPTY;
+            this.setState({
+              gameMatrix : gameMatrix,
+              enableUI : true,
+              turnOfPlayer : {
+                ID : -1,
+                Username : username
+              }
+            });
+          }
+          break;
+        default:
+          console.warn("UNKNOWN MESSAGE : " + JSON.stringify(response));
+          break;
+      }
     };
   }
 
   _onCellPress(X, Y) {
     return () => {
-      const { gameMatrix } = this.state;
-      if (gameMatrix[X][Y] == TicTacToe.EMPTY) {
+      const { gameMatrix, enableUI } = this.state;
+      if (enableUI && gameMatrix[X][Y] == TicTacToe.CellValue.EMPTY) {
         const { socket } = this.state;
         const request = {
+          Type : "Move",
           API_Token : Application.APIToken,
           SessionToken : Application.SessionToken,
           CustomData : {
             Cell : {
-              X : X,
-              Y : Y
+              X : parseInt(X),
+              Y : parseInt(Y)
             },
-            Symbol : this.MY_SIMBOL
+            Symbol : parseInt(this.MY_SIMBOL)
           }
         };
+        console.warn(JSON.stringify(request));
         socket.send(JSON.stringify(request));
+        this.setState({
+          enableUI : false
+        });
       }
     }
   }
 
   _onDummyPress(X, Y) {
-    let { gameMatrix } = this.state;
-    gameMatrix[X, Y] = TicTacToe.CROSS;
-    this.setState({
-      gameMatrix : gameMatrix
-    });
+    return () => {
+      console.warn(X + " - " + Y + "MY SIMBOL = " + this.MY_SIMBOL);
+      let { gameMatrix } = this.state;
+      gameMatrix[X][Y] = this.MY_SIMBOL;
+      this.setState({
+        gameMatrix : gameMatrix
+      });
+    }
   }
 
   componentWillUnmount() {
@@ -122,13 +135,13 @@ export class Lobby extends Component {
   }
 
   render() {
-    const { gameMatrix, matchStatusText, finished } = this.state;
+    const { gameMatrix, enableUI, finished } = this.state;
+    const matchStatusText = !enableUI ? "Waiting for opponents" : "It's your turn, touch a cell to place your symbol";
     return (
       <View style={styles.container}>
-        <Grid onCellPress={this._onDummyPress.bind(this)} gameGrid={gameMatrix} finished={finished}/>
+        <Grid onCellPress={this.onCellPress} gameGrid={gameMatrix} finished={finished}/>
         <Text style={styles.matchStatus}>
-          {matchStatusText}
-          {!finished ? "Touch a valid cell to make your move" : ""}
+          {finished ? "Match finished" : matchStatusText}
         </Text>
       </View>
     )
@@ -138,7 +151,9 @@ export class Lobby extends Component {
 const styles = StyleSheet.create({
   container : {
     flex:1,
-    flexDirection : 'column'
+    flexDirection : 'column',
+    alignItems:'center',
+    justifyContent:'center'
   },
   matchStatus : {
     flex:1

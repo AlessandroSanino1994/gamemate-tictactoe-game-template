@@ -2,6 +2,12 @@ import React, { Component } from 'react';
 import { Application } from '../../../shared_components/application.js';
 import { LoadingButton } from '../../buttons/loadingButton.js';
 import { TicTacToe } from '../../game_logic_view/ticTacToe.js';
+import { Cell } from './cell.js';
+
+import {
+  View,
+  StyleSheet
+} from 'react-native';
 
 export class Grid extends Component {
   constructor(props) {
@@ -18,27 +24,32 @@ export class Grid extends Component {
           <Cell style={styles.cell}
                 X={i}
                 Y={j}
-                onPress={onCellPress(i, j)}/>
-        );
-        rowsPartials.push(
-          <View style={styles.row}>
-            {singleRow}
-          </View>
+                symbol={gameGrid[i][j]}
+                onPress={onCellPress(i, j)}
+                />
         );
       }
+      rowsPartials.push(
+        <View style={styles.row}>
+          {singleRow}
+        </View>
+      );
     }
     return (
       <View style={styles.grid}>
         {rowsPartials}
-      <View>
+      </View>
     );
   }
 }
 
 const styles = StyleSheet.create({
   grid : {
-    width:500,
-    height:500
+    marginTop:80,
+    width:300,
+    height:300,
+    borderColor:'black',
+    borderWidth:2
   },
   row : {
     flex:1,
@@ -46,7 +57,8 @@ const styles = StyleSheet.create({
   },
   cell : {
     flex:1,
-    backgroundColor:lightgray,
-    borderColor:'black'
+    backgroundColor:'white',
+    borderColor:'black',
+    borderWidth:2
   }
 });

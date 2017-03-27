@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Application } from '../../../shared_components/application.js';
 import { LoadingButton } from '../../buttons/loadingButton.js';
 import { ToggleButton } from '../../buttons/toggleButton.js';
-import { LoadingSpinner } from '../../misc/loadingSpinner.js';
+import { MatchScene } from '../match/matchScene.js';
 
 import {
   Text,
@@ -29,44 +29,67 @@ export class Lobby extends Component {
       datasource : dataSourceModel.cloneWithRows([])
     });
 
-    socket.onmessage = (event) => {
-        //parse event.data
-        //handle only lobby events
-        //when match starts pass to another scene
-        //which will replace this function with
-        //another regarding only match events.
-        response = JSON.parse(event.data);
+    if(socket != undefined) {
+      socket.onmessage = (event) => {
+          //parse event.data
+          //handle only lobby events
+          //when match starts pass to another scene
+          //which will replace this function with
+          //another regarding only match events.
+          response = JSON.parse(event.data);
+          //console.warn(JSON.stringify(response));
+
+          const { navigator } = this.props;
           const { lobby } = this.state;
-          const { Action, RoomID, Players, PlayersLeft, MatchStarted } = response;
-          console.warn(JSON.stringify(response));
+          const { Action, RoomID, Players, PlayersLeft, MatchStarted, FirstPlayer } = response;
+
           switch (Action) {
             case "RoomUpdate":
+              const tmpLobby = {
+                RoomID : RoomID,
+                Players : Players,
+                PlayersLeft : PlayersLeft,
+                MatchStarted : MatchStarted
+              };
               this.setState({
-                lobby : {
-                  RoomID : RoomID,
-                  Players : Players,
-                  PlayersLeft : PlayersLeft,
-                  MatchStarted : MatchStarted
-                },
+                lobby : tmpLobby,
                 Players : Players,
                 datasource : dataSourceModel.cloneWithRows(Players)
               });
               if (MatchStarted) {
                 //push match started view.
-                console.warn("MATCH STARTED");
+                //console.warn("MATCH STARTED");
+                //console.warn(JSON.stringify(response));
+                const f = (navigator, MatchScene, tmpLobby, socket, FirstPlayer) => {
+                  return () => {
+                    navigator.push({
+                      name : "Match",
+                      component : MatchScene,
+                        passProps : {
+                        lobby : tmpLobby,
+                        socket : socket,
+                        firstPlayer : FirstPlayer
+                      }
+                    });
+                  }
+                }
+                setTimeout(f(navigator, MatchScene, tmpLobby, socket, FirstPlayer), 3000);
               }
               break;
-              default:
-                console.warn("UNKNOWN MESSAGE : " + JSON.stringify(response));
-                break;
+            default:
+              console.warn("UNKNOWN MESSAGE : " + JSON.stringify(response));
+              break;
           }
-    };
+      };
+    }
   }
 
   componentWillUnmount() {
     //detach message handling.
     const { socket } = this.props;
-    socket.onmessage = () => {};
+    if (socket != undefined) {
+      socket.onmessage = () => {};
+    }
   }
 
   _renderRow(singleItem) {

@@ -29,20 +29,16 @@ export class MainMenuScene extends Component {
     this.setState({socket : this.getSocket()});
   }
 
-  componentDidMount() {
-
-  }
-
   getSocket() {
     const ws = new WebSocket('ws://gamemate.di.unito.it:8080/match/channel');
     ws.onopen = () => {
       console.warn("Socket open");
     };
-    ws.onmessage = null;
+    ws.onmessage = () => {};
     ws.onerror = (error) => {
       this.setState({loading : false});
       //toast android here.
-      console.warn("Socket error : " + error.message);
+      console.warn("Socket error : " + JSON.stringify(error));
     }
     ws.onclose = () => {
       this.setState({loading : false});
@@ -52,22 +48,28 @@ export class MainMenuScene extends Component {
     return ws;
   }
 
+  componentWillUnmount() {
+    const { socket } = this.state;
+    socket.close();
+  }
+
   _searchRoom() {
-    const { navigator, username } = this.props;
+    const { navigator } = this.props;
     const { socket } = this.state;
     //to get_room and wait for response.
     const request = {
       Type : "GetRoom",
       API_Token : Application.APIToken,
       SessionToken : Application.SessionToken,
-      Username : username
+      Username : Application.Username
     }
     socket.send(JSON.stringify(request));
     this.setState({loading : true});
   }
 
   render() {
-    const { loading, lobby, socket } = this.state;
+    const { loading, socket } = this.state;
+    const { navigator } = this.props;
     return (
       <View style={styles.container}>
         <Text>{loading ? "Searching opponents..." : "Press the button to play."}</Text>
@@ -76,7 +78,7 @@ export class MainMenuScene extends Component {
           loading={loading}
           text="search a lobby"
           onPress={this.searchRoom}/>
-        <Lobby socket={socket}/>
+        <Lobby socket={socket} navigator={navigator}/>
       </View>
     );
   }
